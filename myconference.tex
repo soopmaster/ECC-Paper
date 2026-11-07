@@ -253,10 +253,12 @@ The \verb|min| operator is not continuous, which makes it unsuitable for optimiz
 Before moving on, a disclaimer is called for. Recalling~\eqref{eq:reach-condition}, the defender can reach all positions the attacker can reach at some moment $i$, if $\ED_i \cap \EA_i \supseteq \EA_i$ and $\ED_i$ is an inner approximation. Since the defender set is defined as a parametope, which is an over-approximation, only the first part of the condition may hold, which does not guarantee interception. However, it is considered that the larger the volume of $\ED_i^3 \cap \EA_i^3$, the more likely the defender is to intercept the attacker. With this approach in mind, the proposed control architecture is presented in the following section.
 
 \subsection{Control Architecture}
-The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
-Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, a reduced ellipsoid $\ED'$ is used in the defender's case, where 
+The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Before being passed to the solver, this data is transformed as follows.
+
+Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
+Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, an approximated ellipsoid $\ED'$ is defined in the defender's case, where 
 \begin{align}
-    &\ED' = \varepsilon (\pD, \vm{W}),\\
+    &\ED' = \{ \xD \in \mathbb{R}^3 : \varepsilon (\pD, \vm{W}) \le 1\},\\
     &\vm{W}= \dcmD \cdot \left(\yD \begin{bmatrix}
         1 & 0 & 0 \\
         0 & 1 & 0 \\
@@ -264,9 +266,18 @@ Computing the full $\RD$ trajectory online is impractical however, as the object
     \end{bmatrix}
     \right) \cdot \dcmD^T,
 \end{align}
-The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$.
+where $\pD$ is the positional component of the defender model, $\dcmD$ the rotation matrix component and $\yD$ the squared radius computed with the proposed scaling method. The intuition here is that $\vm{W}$ is a disk, aligned according to the defender's dynamics, scaled with the most pessimistic radius given by $\yD$. The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
 
-In following, the components of the NMPC objective function components are defined and briefly explained, before joining them together.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{NMPCdiag}
+    \caption[Diagram of defense controller]{Data flow diagram of defense-centric controller.}
+    \label{fig:NMPC_diag}
+\end{figure}
+
+[NOTE: THE DRC' IS COMPUTED ONLINE AS A NMPC CONSTRAINT, NOT PRE-COMPUTED!!!]
+
+Next in series, the NMPC receives as inputs the $\RD'$ and $\RA^3$ defined previously, and in following, the components of the NMPC objective function components are defined and briefly explained, before joining them together.
 Consider the minimum KLD from $\EA_k^3$ to $\ED_k'$, $k=[0:N]$, to be
 \begin{equation}
     d_{AD} = \LSE{\bKLD{\RA^3}{\RD'}},
@@ -283,13 +294,6 @@ The relevant minimum KLD is the one between the pair of concurrent ellipsoids wh
 \end{equation}
 where $\pA_k$ is the attacker positional variables.
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.9\columnwidth]{NMPCdiag}
-    \caption[Diagram of defense controller]{Data flow diagram of defense-centric controller.}
-    \label{fig:NMPC_diag}
-\end{figure}
-
 This all comes together in the optimization problem
 \begin{align}
     \min_{X,U} &\quad  e Q_e + d_{AD}Q_{AD} - d_{DA}Q_{DA} + \sum_{k = 1}^{N} ||\uD_k||^2_2 R \nonumber\\
@@ -300,7 +304,7 @@ This all comes together in the optimization problem
 \end{align}
 
 where $N$ is the prediction horizon, $f(.,.)$ is the quad-rotor's dynamics function, and $Q_e$, $Q_{AD}$, $Q_{DA}$ and R are the weight matrices.
-The optimization variables are $X = [\xD_k]$ and $U = [\uD_{k}]$, and the parameters are $\vm{x0}$, $\yD_k$ and $\RA^3$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
+The optimization variables are $X = [\xD_k]$ and $U = [\uD_{k}]$, and the parameters are $\vm{x0}$, $\yD_k$ and $\RA^3$. 
 
 \subsection{Safe Reachability Cone}
 \label{sec:safe-reachability-cone}

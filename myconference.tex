@@ -138,9 +138,11 @@ It is organized as follows: firstly in Section~\ref{sec:attacker-defender-scenar
 \paragraph*{Notation} 
 \par The set of real numbers is denoted by $\mathbb{R}$. The identity matrix is denoted by $\mathbb{I}$. Given a vector $\vm{v} \in \mathbb{R}^n$, its transpose is denoted by $\vm{v}^T$, and likewise for a matrix $\vm{M}$. The inner product between two matrices or vectors is denoted by $\vm{v} \cdot \vm{M}$. The cross product operation between a vector and a matrix, denoted by $\vm{v} \times \vm{M}$, is equivalent to the inner product between the skew asymmetric matrix ($SO(3)$) of that vector, which is denoted by $\so{\vm{v}}$, and that matrix. When applied to a matrix, $\so{\vm{M}}$, it can also be used to represent the inverse transformation from an $SO(3)$ matrix to an $\mathbb{R}^3$ vector. The operation vec($\vm{M}$) returns the vectorized matrix.
 
-\section{Attacker-Defender Scenario}
+\section{Attacker-Defender Problem Formulation}
 \label{sec:attacker-defender-scenario}
 The conditions of the reach-avoid scenario are firstly formulated, starting with the definition of the quad-rotor model in Subsection~\ref{ssec:quad-rotor-model}. This is followed, in Subsection~\ref{ssec:area-defense}, by the definition of the attacker's goal and the conditions the defender must satisfy.
+
+The scenario in study is a reach-avoid game between a defender drone and an attacker drone. The attacker's goal is to reach a critical area, and it may take any feasible trajectory that accomplishes this goal in reasonable time. The defender's goal is to reach the attacker before it reaches the critical area, despite the exact attacker trajectory not being known ahead of time. The challenge lies in ensuring that the set of possible defender trajectories fully intersects with the set of attacker trajectories at some moment in the future, thus ensuring the defender reaches the attacker and guaranteeing area defense.
 
 \subsection{Quad-Rotor Model}
 \label{ssec:quad-rotor-model}
@@ -176,21 +178,26 @@ The defender drone model is represented by the state vector $\xD = [\pD; \vD; \t
 %  \label{fig:drone_diag}
 %\end{figure}
 
-\subsection{Area Defense}
+\subsection{Defender-Attacker Reachability}
 \label{ssec:area-defense}
 
-The scenario in study is a reach-avoid game between a defender drone and an attacker drone. The attacker's goal is to reach a critical area, and it may take any feasible trajectory that accomplishes this goal in reasonable time. The defender's goal is to reach the attacker before it reaches the critical area, despite the exact attacker trajectory not being known ahead of time. The challenge lies in ensuring that the set of possible defender trajectories fully intersects with the set of attacker trajectories at some moment in the future, thus ensuring the defender reaches the attacker and guaranteeing area defense.
+%The scenario in study is a reach-avoid game between a defender drone and an attacker drone. The attacker's goal is to reach a critical area, and it may take any feasible trajectory that accomplishes this goal in reasonable time. The defender's goal is to reach the attacker before it reaches the critical area, despite the exact attacker trajectory not being known ahead of time. The challenge lies in ensuring that the set of possible defender trajectories fully intersects with the set of attacker trajectories at some moment in the future, thus ensuring the defender reaches the attacker and guaranteeing area defense.
 
-Considering the defender dynamic system $\dot{\xD} = f(\xD,\uD)$ with a bounded control input $\uD$, the set that is guaranteed to contain all possible states for $\uD \in \mathcal{U}$ at a future time $k$ is called the defender reachable set and is denoted by $\ED_k$. An accurate but overly conservative $\ED_k$ for example, is $\ED_k = \mathbb{R}^n$. Ideally, $\ED_k$ is as accurate to the system's dynamics as possible, while remaining computationally efficient. The set containing all feasible trajectories from the current time $k=0$ to the prediction horizon $k=N$ is called the Defender Reachability Cone (DRC), denoted by $\RD$, and is considered to be the set of consecutive reachable sets in that time frame, that is, $\RD = \{\ED_k\}, \quad k=[0:N]$. The Attacker Reachability Cone (ARC) and reachable sets are denoted as $\RA = \{\EA_k\}, \quad k=[0:N]$. A defender trajectory is considered optimal when
+The defender is a dynamic system $\dot{\xD} = f(\xD,\uD)$ with a bounded control input $\uD$, and the set that is guaranteed to contain all possible states for $\uD \in \mathcal{U}$ at a future time $k$ is called the defender reachable set and is denoted by $\ED_k$. An accurate but overly conservative $\ED_k$ for example, is $\ED_k = \mathbb{R}^n$. Ideally, $\ED_k$ is as accurate to the system's dynamics as possible, while remaining computationally efficient. The set containing all feasible trajectories from the current time $k=0$ to the prediction horizon $k=N$ is called the Defender Reachability Cone (DRC), denoted by $\RD$, and is considered to be the set of consecutive reachable sets in that time frame, that is, $\RD = \{\ED_k\}, \quad k=[0:N]$. The Attacker Reachability Cone (ARC) and reachable sets are denoted as $\RA = \{\EA_k\}, \quad k=[0:N]$. The defender can reach the attacker at any point in the future if the following holds:
 \begin{equation}
     \exists \ED_i \in  \RD : \ED_i \cap \EA_i \supseteq \EA_i, \EA_i \in \RA, 0 \le i\le N.
     \label{eq:reach-condition}
 \end{equation}
-Intuitively, this means that if there is a defender reachable set that fully intersects an attacker reachable set at some moment in the future, then interception is assured and area defense is guaranteed.
+Intuitively, this means that if the intersection between the defender and attacker reachable sets ($\ED_i \cap \EA_i$) is a superset of the attacker reachable set ($\supseteq \EA_i$) at some moment in the future ($i$), then the defender can reach all positions the attacker can reach, as long as $\ED$ is an inner approximation and $\EA$ is an over-approximation. 
+%Intuitively, this means that if there is a defender reachable set that fully intersects an attacker reachable set at some moment in the future, then interception is assured and area defense is guaranteed.
 
-\section{Background on Parametric Reachable Sets}
+\subsection{Parametric Reachable Sets}
 \label{sec:parametric-reachable-set}
-To devise a computationally efficient reachable set representation of a quad-rotor drone, some background on parametric reachable sets is necessary. Here the reachable set is a dynamic parametric ellipsoid, referred to as a parametope~\cite{harapanahalli2025parametric}, and it is represented as
+Traditionally, reachable sets for linear dynamic systems are  approximated using CCGs~\cite{RegoF}~\cite{SilvestreD1}. However, CCGs tend to be computationally expensive and using them with non-linear systems requires linearizations of the system dynamics. Therefore the parametric reachable set via controlled dynamical embeddings is better suited for this work, as it doesn't require linearizing the model.
+
+The parametric reachable set, referred to as a parametope~\cite{harapanahalli2025parametric}, is defined as
+
+%To devise a computationally efficient reachable set representation of a quad-rotor drone, some background on parametric reachable sets is necessary. Here the reachable set is a dynamic parametric ellipsoid, referred to as a parametope~\cite{harapanahalli2025parametric}, and it is represented as
 \begin{equation}
     ((\mathring{\xD}, \alphaD, \yD))_{\varepsilon} := \{ \xD \in \mathbb{R}^n : \ellip{\mathring{\xD}}{(\alphaD^T \cdot \alphaD)^{-1}} \le \yD \},
 \end{equation}
@@ -210,51 +217,28 @@ where $\text{Df}$ is the jacobian, and the radius dynamics function is defined a
 \begin{equation}
     E = c \cdot \yD,
 \end{equation}
-$c$ being an expansion coefficient. In~\cite{harapanahalli2025parametric}, $c$ is computed using the Interval Mixed Jacobian (IMJ) of the system which, in turn, is given by the natural inclusion function matrix of the system's jacobian, obtained through Interval Analysis (IA)~\cite{intervalAnalysis}. Tools such as~\cite{immrax} can efficiently build the smallest IMJ~\cite{mixed_jacobian_matrix}, however implementation of these tools lays outside the scope of this work. Furthermore, in systems with partly decoupled dynamics, like the quad-rotor UAV which has decoupled altitude and attitude dynamics, the dynamic components most sensitive to disturbances will define the bounds of the IMJ, and the actual bounds of the less sensitive components are lost. This is noted with the quad-rotor UAV embeddings system, where the relevant spatial dynamics are overshadowed by the attitude dynamics.
+$c$ being an expansion coefficient. In~\cite{harapanahalli2025parametric}, $c$ is computed using the Interval Mixed Jacobian (IMJ) of the system which, in turn, is given by the natural inclusion function matrix of the system's jacobian, obtained through Interval Analysis (IA)~\cite{intervalAnalysis}. Tools such as~\cite{immrax} can efficiently build the smallest IMJ~\cite{mixed_jacobian_matrix}, however implementation of these tools lays outside the scope of this work. 
 
-An alternative scaling method is used to compute $c$, in which $\vm{p}$ is the translational component of the drone's state, $\vm{p}_{\text{max}}$ the furthest possible trajectory in the next time-step, and $T_s$ the sampling period of the simulation.
-\begin{equation}
-    c(k) = \left(\frac{||\vm{p}_{\text{max}}(k)-\vm{p}(k)||}{\sqrt{\yD(k-1)}}-1 \right)/T_s.
-\end{equation}\\
+It is noted that in systems with partly decoupled dynamics, like the quad-rotor UAV which has decoupled altitude and attitude dynamics, the dynamic components most sensitive to disturbances will define the bounds of the IMJ, and the actual bounds of the less sensitive components are lost. This is noted with the quad-rotor UAV embeddings system, where the relevant spatial dynamics are overshadowed by the attitude dynamics.
 
-\section{Safe Reachability Cone}
-\label{sec:safe-reachability-cone}
-The Safe Reachability Cone (SRC) is the set of trajectories predicted to be denied from the attacker, and is a useful tool to validate and visualize a defensive trajectory. It is represented as
+The following scaling method is therefore proposed to compute $c$, using only the positional dynamics of the drone, and it is given by
 \begin{equation}
-    \RS = [\ES_k], \quad i\le k \le N,
+    c(k) = \left(\frac{||\vm{p}_{\text{max}}(k)-\vm{p}(k)||}{\sqrt{\yD(k-1)}}-1 \right)/T_s,
 \end{equation}
-where $\ES_k$ is the safe reachability set at time-step $k$, and $i$ is the time-step the defender is predicted to reach the attacker. $\ES$ is a parametope defined as
-\begin{equation}
-    \ES = ((\mathring{\vm{x}}_{S}, \alphaA, \yA))_{\varepsilon},
-\end{equation}
-propagated via the controlled dynamic embedding system
-\begin{equation}
-    \dot{\mathring{\vm{x}}}_{S} = q(\mathring{\xA})+\vm{x}_{o}, \quad \dot{\alphaA} = U(\mathring{\xA}, \alphaA, \yA), \quad \dot{\yA} = E(\mathring{\xA}, \alphaA, \yA),
-\end{equation}
-where $q(.)$ is the attacker dynamics, $\xA$ the attacker state vector, $\alphaA$ the attacker parameter matrix with initial value set at $\alphaD_i$, and $\yA$ is the attacker squared radius with initial value $\yD_i$. $\vm{x}_o$ is an offset which aligns the central predicted attacker trajectory with $\ED_i$. The SRC in a simplified reach-avoid scenario is illustrated in Figure~\ref{fig:safeguarded_space_sim}.
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.9\columnwidth]{safeguardedAreaFig}
-    
-    \caption[Illustration of safeguarded area]{Illustration of safeguarded area: 2-dimensional simplification. For $k=[0:N]$, $RD = [\ED_k]$ is the DRC, $\RA = [\EA_k]$ is the ARC, and $\RS = [\ES_k]$ is the SRC.}
-    \label{fig:safeguarded_space_sim}
-\end{figure}
+where which $\vm{p}$ is the translational component of the drone's state, $\vm{p}_{\text{max}}$ the furthest possible trajectory in the next time-step, and $T_s$ the sampling period of the simulation.
 
 \section{Defense Controller Formulation}
 \label{sec:defense-controller-formulation}
-The proposed control architecture is here defined and explained.
-Firstly, some background for the KLD is in order.
-Consider that $\ED^3$ represents the spatial ellipsoid of $\ED$, and is given by
+
+With the defense conditions defined in~\eqref{eq:reach-condition}, and the DRC and ARC defined as sets of dynamically evolving parametopes, the proposed defense control solution can be devised.  
+
+Firstly, some notions of ellipsoidal calculus and similarity must be introduced. Consider that the spatial ellipsoid of $\ED$ is denoted by $\ED^3$ and it is given by the intersection between $\ED$ and the $\mathbb{R}^3$ hyperplane~\cite{ellipsoidal_calculus}, this is
 \begin{equation}
-    \ED^3 = \ED \cap \mathbf{R}^3,
+    \ED^3 = \ED \cap \mathbb{R}^3,
 \end{equation}
-in which the intersection operation is described in~\cite{ellipsoidal_calculus}. The same applies for $\EA^3$.
+and the same applies for $\EA^3$. Computing the intersection of ellipsoids invariably requires the solution of an optimization problem~\cite{yousefi2018novel_ellip_intersection}~\cite{ros2002ellipsoidal} for each prediction step, at each simulation step, which is computationally untenable. 
 
-The nominal defender trajectory would be one that maximizes the volume $\ED_i^3 \cap \EA_i^3$, where $i$ is the time-step the defender is most likely to intercept the attacker, but only if $\ED_i^3$ is an inner approximation of the set of trajectories, and $\EA_i^3$ is an outer over-approximation. However, in this work $\ED$ is an outer approximation, as devising an inner approximation was outside the scope. Still, it is considered that the full intersection of both sets correlates to a likely interception.
-
-Regardless, computing the intersection of ellipsoids invariably requires the solution of an optimization problem~\cite{yousefi2018novel_ellip_intersection}~\cite{ros2002ellipsoidal} for each prediction step, at each simulation step, which is computationally untenable. 
-
-In lieu of ellipsoid intersection, the KLD gives the measure of similarity between two distributions, each described by a positive-definite symmetric covariance matrices, and it is a smooth, always positive, scalar-valued operation that tends to zero when the distributions are identical~\cite{duchi2007derivations}. Furthermore, the KLD is asymmetric~\cite{DKLvisual}. These characteristics make it a good candidate to compute similarity between ellipsoids. The KLD from $\Omega_1 = \ellip{\vm{q}_1}{\vm{Q}_1}$ to $\Omega_2 = \ellip{\vm{q}_2}{\vm{Q}_2}$ of dimensions $n \times n$, has the function notation \KLD{.}{.} and is given by
+In lieu of ellipsoid intersection, the KLD is used to quantify ellipsoid similarity. The KLD is traditionally used as a measure of similarity between two gaussian distributions, each described by a positive-definite symmetric covariance matrices, and it is a smooth, always positive, scalar-valued operation that tends to zero when the distributions are identical~\cite{duchi2007derivations}. Furthermore, the KLD is asymmetric~\cite{DKLvisual}. These characteristics make it a good candidate to quantify similarity between ellipsoids. The KLD from $\Omega_1$ to $\Omega_2$ with centers $\vm{q}_1$, $\vm{q}_2$ and shape matrices $\vm{Q}_1$, $\vm{Q}_2$ respectively, and dimensions $n \times n$, has the function notation \KLD{.}{.} and is given by
 \begin{align}
     \KLD{\Omega_1}{\Omega_2} = &\frac{1}{2} ( \mathtt{tr}(\vm{Q}_2^{-1} \vm{Q}_2) + (\vm{q}_2-\vm{q}_1)^T \vm{Q}_2^{-1} (\vm{q}_2-\vm{q}_1) \nonumber\\
     &- n + \ln \left( \frac{\det \vm{Q}_2}{\det \vm{Q}_1} \right) ).
@@ -263,9 +247,13 @@ The array of pairwise KLD operations between elements of $\RA$ and $\RD$ is deno
 \begin{equation}
     \bKLD{\RA}{\RD} := [\KLD{\EA_k}{\ED_k}], \quad k=[0:N].
 \end{equation}
+
 The \verb|min| operator is not continuous, which makes it unsuitable for optimization problems~\cite{GilpinSTLlse}. The LSE function, denoted by \LSE{.}, poses a smooth under-approximation of the \verb|min| operator as seen in~\cite{LindemannCBFlse}.
 
-Next, the transformations the input data is subject to before being passed to the solver are defined. The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
+Before moving on, a disclaimer is called for. Recalling~\eqref{eq:reach-condition}, the defender can reach all positions the attacker can reach at some moment $i$, if $\ED_i \cap \EA_i \supseteq \EA_i$ and $\ED_i$ is an inner approximation. Since the defender set is defined as a parametope, which is an over-approximation, only the first part of the condition may hold, which does not guarantee interception. However, it is considered that the larger the volume of $\ED_i^3 \cap \EA_i^3$, the more likely the defender is to intercept the attacker. With this approach in mind, the proposed control architecture is presented in the following section.
+
+\subsection{Control Architecture}
+The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
 Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, a reduced ellipsoid $\ED'$ is used in the defender's case, where 
 \begin{align}
     &\ED' = \varepsilon (\pD, \vm{W}),\\
@@ -313,6 +301,29 @@ This all comes together in the optimization problem
 
 where $N$ is the prediction horizon, $f(.,.)$ is the quad-rotor's dynamics function, and $Q_e$, $Q_{AD}$, $Q_{DA}$ and R are the weight matrices.
 The optimization variables are $X = [\xD_k]$ and $U = [\uD_{k}]$, and the parameters are $\vm{x0}$, $\yD_k$ and $\RA^3$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
+
+\subsection{Safe Reachability Cone}
+\label{sec:safe-reachability-cone}
+The Safe Reachability Cone (SRC) is the set of trajectories predicted to be denied from the attacker, and is a useful tool to validate and visualize a defensive trajectory. It is represented as
+\begin{equation}
+    \RS = [\ES_k], \quad i\le k \le N,
+\end{equation}
+where $\ES_k$ is the safe reachability set at time-step $k$, and $i$ is the time-step the defender is predicted to reach the attacker. $\ES$ is a parametope defined as
+\begin{equation}
+    \ES = ((\mathring{\vm{x}}_{S}, \alphaA, \yA))_{\varepsilon},
+\end{equation}
+propagated via the controlled dynamic embedding system
+\begin{equation}
+    \dot{\mathring{\vm{x}}}_{S} = q(\mathring{\xA})+\vm{x}_{o}, \quad \dot{\alphaA} = U(\mathring{\xA}, \alphaA, \yA), \quad \dot{\yA} = E(\mathring{\xA}, \alphaA, \yA),
+\end{equation}
+where $q(.)$ is the attacker dynamics, $\xA$ the attacker state vector, $\alphaA$ the attacker parameter matrix with initial value set at $\alphaD_i$, and $\yA$ is the attacker squared radius with initial value $\yD_i$. $\vm{x}_o$ is an offset which aligns the central predicted attacker trajectory with $\ED_i$. The SRC in a simplified reach-avoid scenario is illustrated in Figure~\ref{fig:safeguarded_space_sim}.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{safeguardedAreaFig}
+    
+    \caption[Illustration of safeguarded area]{Illustration of safeguarded area: 2-dimensional simplification. For $k=[0:N]$, $RD = [\ED_k]$ is the DRC, $\RA = [\EA_k]$ is the ARC, and $\RS = [\ES_k]$ is the SRC.}
+    \label{fig:safeguarded_space_sim}
+\end{figure}
 
 \section{Simulations and Discussion}
 \label{sec:simulations-and-discussion}

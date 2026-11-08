@@ -10,6 +10,9 @@
 \usepackage{newtxmath}
 \usepackage{hhline}
 
+\usepackage{caption}
+\usepackage{subcaption}
+
 \usepackage[style=ieee, sortcites=true, sorting=none, urldate=iso,date=iso,seconds=true]{biblatex}
 \addbibresource{bibliography.bib}
 
@@ -125,7 +128,7 @@ quad-rotor, UAV, reach-avoid, control, autonomous, adversarial, NMPC, reachabili
 \end{IEEEkeywords}
 
 \section{Introduction}
-Unauthorized drone flights into airport airspaces are an increasingly pressing and disruptive issue, as reported by Euronews~\cite{newsDronesAirports}, and to prevent closures, autonomous quad-rotor UAV control has been proven to be an effective strategy for direct and early prevention of airspace trespassing~\cite{WATKINSdrones}.
+Unauthorized drone flights into airport airspaces are a pressing and disruptive issue~\cite{newsDronesAirports}, and to prevent closures of these spaces, autonomous quad-rotor UAV control has been proven to be an effective strategy for direct and early prevention of airspace trespassing~\cite{WATKINSdrones}.
 
 This scenario of autonomous area defense/target pursuit can be formulated as a reach-avoid game, as outlined in the seminal work~\cite{isaacs1999differential_seminal}. These games pose a control problem which have been addressed through optimal control strategies, which require solving the computationally expensive Hamilton-Jacobi-Isaacs equation~\cite{zhou2016cooperative}~\cite{hayoun2017guaranteeing}, but suboptimal strategies such as system decomposition provide computationally tenable solutions~\cite{Bui2025ReachAvoidDG}. MPC based approaches provide reach-avoid trajectory planning by coupling the dynamics of adversarial players in the penalty function~\cite{DoraN}, and CBF based strategies can assure defense conditions, but only while feasible~\cite{LiB}, and are limited to Lyapunov functions~\cite{AliMPCCBF}~\cite{davydov2021pursuer}~\cite{chen2025cooperative}.
 
@@ -256,17 +259,21 @@ Before moving on, a disclaimer is called for. Recalling~\eqref{eq:reach-conditio
 The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Before being passed to the solver, this data is transformed as follows.
 
 Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
-Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, an approximated ellipsoid $\ED'$ is defined in the defender's case, where 
+Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, an approximated ellipsoid $\ED'$ is defined in the defender's case, given by 
 \begin{align}
     &\ED' = \{ \xD \in \mathbb{R}^3 : \varepsilon (\pD, \vm{W}) \le 1\},\\
-    &\vm{W}= \dcmD \cdot \left(\yD \begin{bmatrix}
+    &\vm{W}= w(\dcmD, \yD),
+\end{align}
+where $\pD$ is the positional component of the defender model, $\dcmD$ is the rotation matrix component of the defender model, $\yD$ the squared radius computed with the proposed scaling method and $\vm{W}$ the shape matrix given by the function
+\begin{equation}
+    w(\dcmD, \yD) = \dcmD \cdot \left(\yD \begin{bmatrix}
         1 & 0 & 0 \\
         0 & 1 & 0 \\
         0 & 0 & 0.1
     \end{bmatrix}
-    \right) \cdot \dcmD^T,
-\end{align}
-where $\pD$ is the positional component of the defender model, $\dcmD$ the rotation matrix component and $\yD$ the squared radius computed with the proposed scaling method. The intuition here is that $\vm{W}$ is a disk, aligned according to the defender's dynamics, scaled with the most pessimistic radius given by $\yD$. The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
+    \right) \cdot \dcmD^T.
+\end{equation}
+The intuition here is that $\vm{W}$ is a disk, aligned according to the defender's dynamics, scaled with the most pessimistic radius given by $\yD$. The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$, that is $\RD' = \{\ED_k'\}, \quad k=[0:N]$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
 
 \begin{figure}[htbp]
     \centering
@@ -275,9 +282,9 @@ where $\pD$ is the positional component of the defender model, $\dcmD$ the rotat
     \label{fig:NMPC_diag}
 \end{figure}
 
-[NOTE: THE DRC' IS COMPUTED ONLINE AS A NMPC CONSTRAINT, NOT PRE-COMPUTED!!!]
+%[NOTE: THE DRC' IS COMPUTED ONLINE AS A NMPC CONSTRAINT, NOT PRE-COMPUTED!!!]
 
-Next in series, the NMPC receives as inputs the $\RD'$ and $\RA^3$ defined previously, and in following, the components of the NMPC objective function components are defined and briefly explained, before joining them together.
+Next in series, the NMPC receives as inputs the $\RA^3$ defined previously, and in following, the components of the NMPC objective function components are defined and briefly explained, before joining them together.
 Consider the minimum KLD from $\EA_k^3$ to $\ED_k'$, $k=[0:N]$, to be
 \begin{equation}
     d_{AD} = \LSE{\bKLD{\RA^3}{\RD'}},
@@ -286,7 +293,7 @@ and the symmetric counterpart,
 \begin{equation}
     d_{DA} = \LSE{\bKLD{\RD'}{\RA^3}},
 \end{equation}
-and assume that both values correspond to the pair of concurrent ellipsoids $\ED_i'$ and $\EA_i^3$ closest to each other. In the final stage of approach, when there is overlap between $\RD'$ and $\RA^3$, in order for the reach condition defined in~\eqref{eq:reach-condition} to be satisfied, then the inequality $d_{AD} \le d_{DA}$ must be verified. Thus, the system should evolve such that $d_{AD}$ decreases faster than $d_{DA}$, which is enforced by minimizing $d_{AD}$ and at the same time maximizing $d_{DA}$ in the objective function.
+and assume that both values correspond to the pair of concurrent ellipsoids $\ED_i'$ and $\EA_i^3$ closest to each other. In the final stage of approach, when there is overlap between $\RD'$ and $\RA^3$, in order for the first part of the reach condition defined in~\eqref{eq:reach-condition} to be satisfied, then the inequality $d_{AD} \le d_{DA}$ must be verified. Thus, the system should evolve such that $d_{AD}$ decreases faster than $d_{DA}$, which is enforced by minimizing $d_{AD}$ and at the same time maximizing $d_{DA}$ in the objective function.
 
 The relevant minimum KLD is the one between the pair of concurrent ellipsoids which are nearest. This is enforced by introducing the term $e$ in the objective function, which is the minimum of the set of ellipsoid center error norms, denoted as 
 \begin{equation}
@@ -299,12 +306,13 @@ This all comes together in the optimization problem
     \min_{X,U} &\quad  e Q_e + d_{AD}Q_{AD} - d_{DA}Q_{DA} + \sum_{k = 1}^{N} ||\uD_k||^2_2 R \nonumber\\
     s.t.: &\quad \xD_0 = \vm{x0} \nonumber\\
     &\quad \xD_{k+1} = f(\xD_k, \uD_{k}), \nonumber\\
+    &\quad \vm{W}_k = w(\dcmD_k, \yD_k), \nonumber\\
     &\quad \xD \in \mathcal{X}  \nonumber\\
     &\quad \uD \in \mathcal{U}
 \end{align}
 
 where $N$ is the prediction horizon, $f(.,.)$ is the quad-rotor's dynamics function, and $Q_e$, $Q_{AD}$, $Q_{DA}$ and R are the weight matrices.
-The optimization variables are $X = [\xD_k]$ and $U = [\uD_{k}]$, and the parameters are $\vm{x0}$, $\yD_k$ and $\RA^3$. 
+The optimization variables are $X = [\xD_k]$ and $U = [\uD_{k}]$, and the parameters are $\vm{x0}$, $\vm{y} = [\yD_k]$ and $\RA^3$. 
 
 \subsection{Safe Reachability Cone}
 \label{sec:safe-reachability-cone}
@@ -331,11 +339,12 @@ where $q(.)$ is the attacker dynamics, $\xA$ the attacker state vector, $\alphaA
 
 \section{Simulations and Discussion}
 \label{sec:simulations-and-discussion}
+The developed systems were validated through simulation, implemented in MATLAB~\cite{MATLAB}, using the Runge-Kutta-4 (RK4)~\cite{RK4} integration method and a time-step length of $0.01s$. The simulated quad-rotor drones have the physical parameters defined in Table~\ref{tab:quadrotor_parameters} and the input bounds defined in Table~\ref{tab:quadrotor_variable_bounds}.
 
 \subsection{Reachable Set Validation}
-A simulation of a quad-rotor model moving from an initial hovering position to another hovering position was run with MATLAB~\cite{MATLAB} to verify the accuracy of the reachable set, outlined in Section~\ref{sec:parametric-reachable-set}, when compared to potential trajectories. Predicted state trajectories are computed from the current moment to the prediction horizon by fixing the drone's torque input $[\uD_2;\uD_3;\uD_4]$ as combinations of the maximum, minimum, and middle values, and the $\uD_1$ input at its minimum or maximum. The drone's physical parameters are in Table~\ref{tab:quadrotor_parameters}, and the input bounds are in Table~\ref{tab:quadrotor_variable_bounds}.
+A simulation of a quad-rotor model moving from an initial hovering position to another hovering position was run with MATLAB~\cite{MATLAB} to verify the accuracy of the reachable set, outlined in Section~\ref{sec:parametric-reachable-set}, when compared to potential trajectories. Predicted state trajectories are computed from the current moment to the prediction horizon by fixing the drone's torque input $[\uD_2;\uD_3;\uD_4]$ as combinations of the maximum, minimum, and middle values, and the $\uD_1$ input at its minimum or maximum. 
 
-In both the following figures, the $k_{sim}$ axis indicates the real-time time-steps, and the $k_{pred}$ axis indicates the predicted time-steps. Figure~\ref{fig:reach-set-median-error} shows the median distance between the reachable set surface and the trajectories it contains at the respective time-steps, where positive values indicate the trajectory is contained in the set, and negative values that it's outside. Figure~\ref{fig:reach-set-volume-error} shows the volume difference between the reachable set and the convex hull formed by the trajectories.
+In both the following figures, the $k_{sim}$ axis indicates the real-time time-steps, and the $k_{pred}$ axis indicates the predicted time-steps. Figure~\ref{fig:reach-set-median-error} shows the median distance between the reachable set surface and the trajectories it contains~\cite{ellipPoint} at the respective time-steps, where positive values indicate the trajectory is contained in the set, and negative values that it's outside. Figure~\ref{fig:reach-set-volume-error} shows the volume difference between the reachable set and the convex hull formed by the trajectories.
 
 \begin{figure}[htbp]
     \includegraphics[width=0.9\columnwidth]{monteCarloME_N50}
@@ -350,26 +359,29 @@ In both the following figures, the $k_{sim}$ axis indicates the real-time time-s
 \end{figure}
 
 \subsection{Two Drone Scenario}
-A reach-avoid scenario is simulated with MATLAB~\cite{MATLAB}, in which the attacker drone moves toward the critical area, set at the origin, and has a polynomial trajectory planner in series with a Mellinger controller~\cite{Mellinger} as the control architecture. Furthermore, the attacker's trajectory is made unpredictable by repeatedly shifting the target waypoint by random amounts. The defender drone is initially hovering above the critical area. Both drones are quad-rotor UAVs, and their physical parameters are in Table~\ref{tab:quadrotor_parameters}, and their input bounds are in Table~\ref{tab:quadrotor_variable_bounds}.
+
+A reach-avoid scenario is simulated with MATLAB~\cite{MATLAB}, in which the attacker drone moves toward the critical area, set at the origin, and has a polynomial trajectory planner in series with a Mellinger controller~\cite{Mellinger} as the control architecture. Furthermore, the attacker's trajectory is made unpredictable by repeatedly shifting the target waypoint by random amounts. The defender drone is initially hovering above the critical area.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
 \caption{Quad-Rotor Parameters}
 \label{tab:quadrotor_parameters}
-\begin{center}
-\begin{tabular}{cccclllllll}
-\cline{1-4}
-\multicolumn{1}{c|}{Parameter} & \multicolumn{1}{c|}{Description}             & \multicolumn{1}{c|}{Units}                     & Value                &  &  &  &  &  &  &  \\ \hhline{=|=|=|=~~~~~~~}
-\multicolumn{1}{c|}{$M$}       & \multicolumn{1}{c|}{Total Mass}              & \multicolumn{1}{c|}{$\text{kg}$}               & $0.5$                &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$L$}       & \multicolumn{1}{c|}{Arm Length}              & \multicolumn{1}{c|}{$\text{m}$}                & $0.25$               &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$I_x$}     & \multicolumn{1}{c|}{Angular Momentum x axis} & \multicolumn{1}{c|}{$\text{J} \cdot \text{s}$} & $0.0196$             &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$I_y$}     & \multicolumn{1}{c|}{Angular Momentum y axis} & \multicolumn{1}{c|}{$\text{J} \cdot \text{s}$} & $0.0196$             &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$I_z$}     & \multicolumn{1}{c|}{Angular Momentum z axis} & \multicolumn{1}{c|}{$\text{J} \cdot \text{s}$} & $0.0264$             &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{l}{}           & \multicolumn{1}{l}{}                         & \multicolumn{1}{l}{}                           & \multicolumn{1}{l}{} &  &  &  &  &  &  &  \\
-\multicolumn{1}{l}{}           & \multicolumn{1}{l}{}                         & \multicolumn{1}{l}{}                           & \multicolumn{1}{l}{} &  &  &  &  &  &  &  \\
-\multicolumn{1}{l}{}           & \multicolumn{1}{l}{}                         & \multicolumn{1}{l}{}                           & \multicolumn{1}{l}{} &  &  &  &  &  &  &  \\ 
+\centering
+\begin{tabular}{c||c||c||c}
+\hline
+\bfseries Parameter & \bfseries Description & \bfseries Units & \bfseries Value\\
+\hline\hline
+$M$ & Total Mass & kg & $0.5$\\
+\hline
+$L$ & Arm Length & m & $0.25$ \\
+\hline
+$I_x$ & Angular Momentum x axis & kg$\cdot \text{m}^2/$s & $0.0196$\\
+\hline
+$I_y$ & Angular Momentum y axis & kg$\cdot \text{m}^2/$s & $0.0196$\\
+\hline
+$I_z$ & Angular Momentum z axis & kg$\cdot \text{m}^2/$s & $0.0264$\\
+\hline
 \end{tabular}
-\end{center}
 \end{table}
 
 \begin{table}[!t]
@@ -377,32 +389,55 @@ A reach-avoid scenario is simulated with MATLAB~\cite{MATLAB}, in which the atta
 \caption{Quad-Rotor Input Bounds}
 \label{tab:quadrotor_variable_bounds}
 \centering
-\begin{tabular}{cccclllllll}
-\cline{1-4}
-\multicolumn{1}{c|}{Variable} & \multicolumn{1}{c|}{Units}                           & \multicolumn{1}{c|}{Lower bound} & Upper bound          &  &  &  &  &  &  &  \\ \hhline{=|=|=|=~~~~~~~}
-\multicolumn{1}{c|}{$u_1$}    & \multicolumn{1}{c|}{$N$}                             & \multicolumn{1}{c|}{$0.0001$}    & $50$                 &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$u_2$}    & \multicolumn{1}{c|}{$\text{rad}\cdot \text{s}^{-2}$} & \multicolumn{1}{c|}{$-2 \pi$}    & $2 \pi$              &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$u_3$}    & \multicolumn{1}{c|}{$\text{rad}\cdot \text{s}^{-2}$} & \multicolumn{1}{c|}{$-2 \pi$}    & $2 \pi$              &  &  &  &  &  &  &  \\ \cline{1-4}
-\multicolumn{1}{c|}{$u_4$}    & \multicolumn{1}{c|}{$\text{rad}\cdot \text{s}^{-2}$} & \multicolumn{1}{c|}{$-2 \pi$}    & $2 \pi$              &  &  &  &  &  &  &  \\ \cline{1-4}
-                              &                                                      &                                  &                      &  &  &  &  &  &  &  \\
-\multicolumn{1}{l}{}          & \multicolumn{1}{l}{}                                 & \multicolumn{1}{l}{}             & \multicolumn{1}{l}{} &  &  &  &  &  &  &  \\
-\multicolumn{1}{l}{}          & \multicolumn{1}{l}{}                                 & \multicolumn{1}{l}{}             & \multicolumn{1}{l}{} &  &  &  &  &  &  &  \\
-\multicolumn{1}{l}{}          & \multicolumn{1}{l}{}                                 & \multicolumn{1}{l}{}             & \multicolumn{1}{l}{} &  &  &  &  &  &  & 
+\begin{tabular}{c||c||c||c}
+\hline
+\bfseries Variable & \bfseries Units & \bfseries Lower Bound & \bfseries Upper Bound\\
+\hline\hline
+$u_1$ & N & $0.0001$ & $50$\\
+\hline
+$u_2$ & rad$\cdot \text{s}^{-2}$ & $-2 \pi$ & $2 \pi$ \\
+\hline
+$u_3$ & rad$\cdot \text{s}^{-2}$ & $-2 \pi$ & $2 \pi$ \\
+\hline
+$u_4$ & rad$\cdot \text{s}^{-2}$ & $-2 \pi$ & $2 \pi$ \\
+\hline
 \end{tabular}
 \end{table}
 
-A series of images showing this simulation from the initial moment to the moment the defender reaches the attacker are in Figure~\ref{fig:DvAfig_N50_s_unp}, where $\RD$ are the blue ellipsoids and $\RA$ are the orange ellipsoids. The simulation shows the defender speeding towards the attacker, then as $\RD$ and $\RA$ overlap the defender slows down as there is a $\ED_i$ which expands to contain the corresponding $\EA_i$. This can be seen as the defender positioning itself such that there is a moment it can reach any trajectory the attacker may take.
+A series of images showing this simulation from the initial moment to the moment the defender reaches the attacker are in Figure~\ref{fig:DvAfig_N50_s_unp}, where $\RD^3$ are the blue ellipsoids and $\RA^3$ are the orange ellipsoids. The simulation shows the defender speeding towards the attacker, then as $\RD^3$ and $\RA^3$ overlap the defender slows down as there is a $\ED^3_i$ which expands to contain the corresponding $\EA^3_i$. This can be seen as the defender positioning itself such that there is a moment it can reach any trajectory the attacker may take.
 
 The defender's performance data is shown in Figure~\ref{fig:DvAerr_N50_s_unp}, where the top graph shows the norm of the distance between defender and attacker throughout the simulation, and the bottom graph shows the area of $\RA^3 \cap \mathcal{G}$ in blue, and $\RS^3 \cap \mathcal{G}$ in orange, denoted by $\Theta_A$ and $\Theta_S$ respectively, with $\mathcal{G}$ being the $\mathbb{R}^3$ ground plane. It can be seen that $\Theta_S$ fully overlaps $\Theta_A$ from approximately $t=0.1s$ to $t=0.3s$, which indicates that throughout this timeframe the defender is positioned such that it can reach all attacker trajectories.
+
+The evolution of the KLD between $\RA^3$ and $\RD'$ is shown in Figure~\ref{fig:DvAdkl_N50_s_unp} as a surface, where the simulation time-steps are $k_{sim}$, the prediction time-steps are $k_{pred}$, and the color bar indicates the value of KLD, capped at 1000. The red line highlights the minimum KLD at each $k_{pred}$. It can be seen that the KLD tends to decrease to zero, indicating that the DRC is overlapping with the ARC. Observing red line, it can be seen that the $k_{pred}$ of the minimum KLD tends to decrease, showing how the predicted time of interception approaches the present.
 
 %A: p0=(20,-20,5), vf=10*tf*(-1,1,0.5)/||(-1,1,0.5)||, af=10*(-1,1,0.5)/||(-1,1,0.5)||
 
 \begin{figure}[htbp]
   \centering
-    \includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp1}
-    \includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp2}\\
-    \includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp3}
-    \includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp4}\\
+  \begin{subfigure}[b]{0.49\columnwidth}
+         \centering
+         \includegraphics[width=\columnwidth]{DvAfig_N50_s_unp1}
+         \caption{$t = 0.01s$}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.49\columnwidth}
+         \centering
+         \includegraphics[width=\columnwidth]{DvAfig_N50_s_unp2}
+         \caption{$t = 0.27s$}
+     \end{subfigure}\\
+     \begin{subfigure}[b]{0.49\columnwidth}
+         \centering
+         \includegraphics[width=\columnwidth]{DvAfig_N50_s_unp3}
+         \caption{$t = 0.54s$}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.49\columnwidth}
+         \centering
+         \includegraphics[width=\columnwidth]{DvAfig_N50_s_unp4}
+         \caption{$t = 0.81s$}
+     \end{subfigure}
+    %\includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp1}
+    %\includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp2}\\
+    %\includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp3}
+    %\includegraphics[width=0.45\columnwidth]{DvAfig_N50_s_unp4}\\
   \caption[Visualization of single D with defense controller vs. unpredictable A]{Visualization of single defender with defense-centric controller vs unpredictable attacker with Mellinger controller in defense scenario, N=50.}
   \label{fig:DvAfig_N50_s_unp}
 \end{figure}
@@ -411,6 +446,12 @@ The defender's performance data is shown in Figure~\ref{fig:DvAerr_N50_s_unp}, w
     \includegraphics[width=0.9\columnwidth]{DvAerr_N50_s_unp}
   \caption[Performance analysis of defense controller in 1D vs. 1 unpredictable A scenario]{Performance analysis of  defense-centric controller in defense scenario with 1 defender and 1 unpredictable attacker.}
   \label{fig:DvAerr_N50_s_unp}
+\end{figure}
+\begin{figure}[htbp]
+  \centering
+    \includegraphics[width=0.9\columnwidth]{DvAdkl_N50_s_unp}
+  \caption[Performance analysis of defense controller in 1D vs. 1 unpredictable A scenario]{KLD between A and D across simulation.}
+  \label{fig:DvAdkl_N50_s_unp}
 \end{figure}
 
 \section{Conclusions and Further Work}

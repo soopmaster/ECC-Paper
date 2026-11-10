@@ -87,14 +87,14 @@
 %should not be used}
 }
 
-\author{\IEEEauthorblockN{António Canteiro}
+\author{António Canteiro$^{1}$ and Daniel Silvestre$^{2}$%
 \thanks{*This work was not supported by any organization}% <-this % stops a space
-\thanks{$^{1}$Albert Author is with Faculty of Electrical Engineering, Mathematics and Computer Science,
-        University of Twente, 7500 AE Enschede, The Netherlands
-        {\tt\small albert.author@papercept.net}}%
-\thanks{$^{2}$Bernard D. Researcheris with the Department of Electrical Engineering, Wright State University,
-        Dayton, OH 45435, USA
-        {\tt\small b.d.researcher@ieee.org}}%
+\thanks{$^{1}$António Canteiro is with the School of Science and Technology, NOVA University of Lisbon (FCT/UNL),
+        Caparica, Portugal
+        {\tt\small a.canteiro@campus.fct.unl.pt}}%
+\thanks{$^{2}$Daniel Silvestre is with the School of Science and Technology, NOVA University of Lisbon (FCT/UNL)
+        Caparica, Portugal
+        {\tt\small dsilvestre@fct.unl.pt}}%
 }
 
 
@@ -105,14 +105,35 @@
 %Why is it an interesting problem: If the set of possible defender trajectories fully intersects the set of attacker trajectories at some moment in the future, then interception is assured and area defense is guaranteed.\\
 %What my solution achieves: novel MPC based strategy which drives the dynamically modelled defender reachable set to overlap the attacker reachable set.\\
 %What follows from my solution: The defender continuously maneuvers itself to the trajectory most likely to reach all possible attacker trajectories.
+% WHAT IS THE PROBLEM
+In the reach-avoid scenario in which a defender quad-rotor UAV is preventing an attacking UAV from reaching a critical area, the defender controller must be formulated so that it enforces the defense conditions tractably.
+%
+% WHAT ARE SOME SOLUTIONS
+%NMPC-based strategies are well-suited for similar scenarios with non-linear dynamics given their flexibility with objectives.
+%
+% WHAT IS THE PROBLEM WITH THESE SOLUTIONS
+NMPC-based controllers are used in scenarios with non-linear dynamics
+due to the flexibility of the NMPC objective function and trajectory planning. However, defense conditions are typically formulated using reachable sets, which is challenging to reconcile with the NMPC objective, a differentiable scalar function.
 
-In a reach-avoid scenario in which a quad-rotor UAV is preventing an attacking UAV from reaching a critical area, the defender must be guaranteed to reach the attacker before the attacker reaches the critical area.
+% WHAT YOUR WORK ACCOMPLISHES
+This work proposes a novel NMPC-based defender controller that optimizes the trajectory to best enforce the defense condition derived from the attacker and defender reachable sets. By combining a parametric reachable set framework with the Kullback-Leibler Divergence, the set operations that characterize the defense strategy are expressed as a scalar valued objective function. Additionally, this approach was validated in a
+simulated environment in MATLAB.
+
+%This work proposes a novel encoding of the defense condition which allows it to
+%be used as the NMPC objective function, allowing the defender controller to
+%leverage ....???, by combining a parametric reachable set framework with the
+%Kullback-Leibler Divergence. Additionally, this approach was validated in a
+%simulated environment in MATLAB.
+
+% HOW DOES IT WORK
+%It joins 
 
 %This is especially true in the real world, where ensuring area defense against potentially hostile UAVs is paramount.
 
-Expanding on previous work on defensive control strategies for reach-avoid games, this thesis proposes a novel NMPC based strategy which drives the set of possible defender trajectories to overlap with the set of possible attacker trajectories. Unlike other NMPC and CBF based strategies, the set of possible trajectories is continuously updated according to the quad-rotor dynamics.
 
-With the proposed control strategy, the defender continuously maneuvers itself to the trajectory most likely to reach all possible attacker trajectories, thus maintaining a guarantee of area defense throughout its operational period.
+%This work proposes a novel NMPC based strategy that formulates the . Unlike other NMPC and CBF based strategies, the set of possible trajectories is continuously updated according to the quad-rotor dynamics.
+
+%With the proposed control strategy, the defender continuously maneuvers itself to the trajectory most likely to reach all possible attacker trajectories, thus maintaining a guarantee of area defense throughout its operational period.
 
 %A preventative solution to unauthorized incursions of commercial drones into urban airspaces lies in autonomous quad-rotor UAV control in area defense scenarios. 
 
@@ -130,34 +151,31 @@ quad-rotor, UAV, reach-avoid, control, autonomous, adversarial, NMPC, reachabili
 \section{Introduction}
 Reach-Avoid (RA) games are a class of differential games between two adversary agents, wherein an attacker agent aims to reach a target, while the defender agent aims to intercept the attacker before it reaches its goal.
 
-Our focus is on three-dimensional reach avoid games between quad-rotor UAVs, which, importantly, can model real-world scenarios such as UAVs incursions into urban airspaces (e.g. airport airspaces~\cite{newsDronesAirports}), yet, are challenging to solve
-% TODO: "to solve" posso usar aqui^?
+The focus of this work is on three-dimensional reach-avoid games between quad-rotor Unmanned Aerial Vehicles (UAVs), which, importantly, can model real-world scenarios such as UAV incursions into urban airspaces (e.g. airport airspaces~\cite{newsDronesAirports}). 
 %
-in practice due to the system dynamics being non-linear and because defense strategies must balance effectiveness with computational feasibility.
+In this scenario, solving RA games primarily implies dealing with non-linear system dynamics and formulating defense strategies that balance efficacy with computational feasibility.
 
 % is a pressing issue, since as the presence of  In such a scenario, the study of RA games
 % also implies a host of challenges to address, like dealing with non-linear
 % system dynamics, or formulating defense strategies that balance efficacy with
 % computational feasibility.
 
-Since the conception of differential games~\cite{isaacs1999differential_seminal}, much work has been done to address effectiveness in the presence of non-linearity, as well as computational feasibility, amongst other challenges.
+Since the conception of differential games~\cite{isaacs1999differential_seminal}, many methods have been developed to solve them with varying tradeoffs and advantages.
 %
-For instance, solving the Hamilton-Jacobi-Isaacs (HJI) system of differential equations is one method to solve RA games that guarantees optimal control, at the cost of being prohibitively computationally expensive for systems of higher dimensions~\cite{zhou2016cooperative}~\cite{hayoun2017guaranteeing}~\cite{Bui2025ReachAvoidDG}.
+For instance, solving the Hamilton-Jacobi-Isaacs (HJI) system of differential equations is one method to solve RA games that guarantees optimal control, at the cost of being prohibitively computationally expensive for systems of higher dimensions~\cite{zhou2016cooperative,Bui2025ReachAvoidDG,hayoun2017guaranteeing}.
 %
-% TODO: "Alternatively" faz sentido para a CBFs vs HJI?
-Alternatively, Constraint Barrier Function (CBF) based strategies condition the input as to ensure the system stays within a set of values which ensure interception under certain conditions~\cite{Bui2025ReachAvoidDG}~\cite{AliMPCCBF}~\cite{davydov2021pursuer}~\cite{chen2025cooperative}, but the CBF cannot provide an optimal trajectory, only instantaneous inputs, and it struggles to handle non-linear systems.
+Alternatively, Constraint Barrier Function (CBF) based strategies condition the input as to ensure the system stays within a set of values which ensure interception under certain conditions~\cite{Bui2025ReachAvoidDG,chen2025cooperative,AliMPCCBF,davydov2021pursuer}, but the CBF cannot provide an optimal trajectory, only instantaneous inputs, and it struggles to handle non-linear systems.
 
-Overall, the Non-linear Model Predictive Controller (NMPC)~\cite{}, which calculates the state trajectory that minimizes an objective function over a finite time horizon, is well-suited for our RA problem since it can deal with non-linear dynamics directly and offers great flexibility in choice of objectives and constraints~\cite{}~\cite{DoraN}.
+Overall, the Non-linear Model Predictive Controller (NMPC) is well-suited for our RA problem since it can deal with non-linear dynamics directly and offers great flexibility in choice of objectives and constraints, by calculating the state trajectory that minimizes an objective function over a finite time horizon~\cite{DoraN,}.
 
-However, translating a defense strategy which takes into account the agents' set of possible trajectories into an objective function is challenging. (WHY?)\cite{WHY}
+However, there's a mismatch between the normally smooth, differentiable, scalar-valued NMPC objective function and the defense conditions based on sets-of-trajectories traditionally used to formulate defense strategies.
 
-In this work, we propose an NMPC-based defensive control strategy that combines a parametric reachable set framework with the KLD in the NMPC objective function for a non-linear RA game between UAV quad-rotors. In particular, we make the following contributions:
+In this light, we propose an NMPC-based defensive control strategy that combines a parametric reachable set framework with the Kullback-Leibler Divergence (KLD) as the NMPC objective function, for a non-linear RA game between UAV quad-rotors. In particular, we make the following contributions:
 \begin{itemize}
-    \item A formulation of the RA scenario, in Section~\ref{sec:attacker-defender-scenario}
-    \item An NMPC based defense strategy which provides a best-possible capture solution, in Section~\ref{sec:safe-reachability-cone}
-    \item We introduce the ``safe reachability cone'' as a tool to validate a defensive trajectory, in Section~\ref{sec:defense-controller-formulation}
-    \item We validate our theory experimentally? in a MATLAB simulated environment, in Section~\ref{sec:simulations-and-discussion}
-%TODO: experimentally?
+    \item A formulation of the RA scenario, in Section~\ref{sec:attacker-defender-scenario}.
+    \item An NMPC based defense strategy which provides a best-effort reach-capture solution, in Section~\ref{sec:defense-controller-formulation}.
+    \item We introduce the ``safe reachability cone'' as a tool to validate a defensive trajectory, in Section~\ref{sec:safe-reachability-cone}.
+    \item We validate this control strategy in a MATLAB simulated environment, in Section~\ref{sec:simulations-and-discussion}.
 \end{itemize}
 %
 % And final remarks are made in Section~\ref{sec:conclusions-and-further-work}.
@@ -185,11 +203,11 @@ In this work, we propose an NMPC-based defensive control strategy that combines 
 \label{sec:attacker-defender-scenario}
 The conditions of the reach-avoid scenario are firstly formulated, starting with the definition of the quad-rotor model in Subsection~\ref{ssec:quad-rotor-model}. This is followed, in Subsection~\ref{ssec:area-defense}, by the definition of the attacker's goal and the conditions the defender must satisfy.
 
-The scenario in study is a reach-avoid game between a defender drone and an attacker drone. The attacker's goal is to reach a critical area, and it may take any feasible trajectory that accomplishes this goal in reasonable time. The defender's goal is to reach the attacker before it reaches the critical area, despite the exact attacker trajectory not being known ahead of time. The challenge lies in ensuring that the set of possible defender trajectories fully intersects with the set of attacker trajectories at some moment in the future, thus ensuring the defender reaches the attacker and guaranteeing area defense.
+The scenario in question is a reach-avoid game between a defender drone and an attacker drone. The attacker's goal is to reach a critical area, and it may take any feasible trajectory that accomplishes this goal in reasonable time. The defender's goal is to reach the attacker before it reaches the critical area, despite the exact attacker trajectory not being known ahead of time. The challenge lies in ensuring that the set of possible defender trajectories fully intersects with the set of attacker trajectories at some moment in the future, thus ensuring the defender reaches the attacker and guaranteeing area defense.
 
 \subsection{Quad-Rotor Model}
 \label{ssec:quad-rotor-model}
-The quad-rotor drone 6DoF model is built on the assumptions that its mass remains constant, the method of propulsion are four vertical rotors, attitude control is provided by a torque vector and altitude control by a scalar thrust input, it has GNC capability that allows it to discern its position relative to obstacles and the target and path plan, and it is subject to aerodynamic drag. The model is based on the Euler-Angle-Free model described in~\cite{AssloujE}.
+The six degrees of freedom (6DoF) quad-rotor drone model is built on the following assumptions: its mass remains constant; the method of propulsion are four vertical rotors; attitude control is provided by a torque vector; and altitude control by a scalar thrust input. The model is based on the Euler-Angle-Free model described in~\cite{AssloujE}.
 
 The control input to the quad-rotor drone model can be written as $\uD \in \mathbb{R}^4$ where $u_1$ is the net body force and $u_2$, $u_3$, $u_4$ are the body moments. The position $\pD \in \mathbb{R}^3$ dynamics is defined by the equation
 \begin{equation}
@@ -236,7 +254,7 @@ Intuitively, this means that if the intersection between the defender and attack
 
 \subsection{Parametric Reachable Sets}
 \label{sec:parametric-reachable-set}
-Traditionally, reachable sets for linear dynamic systems are  approximated using CCGs~\cite{RegoF}~\cite{SilvestreD1}. However, CCGs tend to be computationally expensive and using them with non-linear systems requires linearizations of the system dynamics. Therefore the parametric reachable set via controlled dynamical embeddings is better suited for this work, as it doesn't require linearizing the model.
+Traditionally, reachable sets for linear dynamic systems are  approximated using Constrained Convex Generators (CCG)s~\cite{RegoF,SilvestreD1}. However, CCGs tend to be computationally expensive and using them with non-linear systems requires linearizations of the system dynamics. Therefore the parametric reachable set via controlled dynamical embeddings is better suited for this work, as it doesn't require linearizing the model.
 
 The parametric reachable set, referred to as a parametope~\cite{harapanahalli2025parametric}, is defined as
 
@@ -270,16 +288,16 @@ The following scaling method is therefore proposed to compute $c$, using only th
 \end{equation}
 where which $\vm{p}$ is the translational component of the drone's state, $\vm{p}_{\text{max}}$ the furthest possible trajectory in the next time-step, and $T_s$ the sampling period of the simulation.
 
-\section{Defense Controller Formulation}
+\section{Defense Controller}
 \label{sec:defense-controller-formulation}
 
-With the defense conditions defined in~\eqref{eq:reach-condition}, and the DRC and ARC defined as sets of dynamically evolving parametopes, the proposed defense control solution can be devised.  
+The defense controller is developed in this section with the defense conditions defined in~\eqref{eq:reach-condition}, and the DRC and ARC defined as sets of dynamically evolving parametopes.  
 
 Firstly, some notions of ellipsoidal calculus and similarity must be introduced. Consider that the spatial ellipsoid of $\ED$ is denoted by $\ED^3$ and it is given by the intersection between $\ED$ and the $\mathbb{R}^3$ hyperplane~\cite{ellipsoidal_calculus}, this is
 \begin{equation}
     \ED^3 = \ED \cap \mathbb{R}^3,
 \end{equation}
-and the same applies for $\EA^3$. Computing the intersection of ellipsoids invariably requires the solution of an optimization problem~\cite{yousefi2018novel_ellip_intersection}~\cite{ros2002ellipsoidal} for each prediction step, at each simulation step, which is computationally untenable. 
+and the same applies for $\EA^3$. Computing the intersection of ellipsoids invariably requires the solution of an optimization problem~\cite{yousefi2018novel_ellip_intersection,ros2002ellipsoidal} for each prediction step, at each simulation step, which is computationally untenable. 
 
 In lieu of ellipsoid intersection, the KLD is used to quantify ellipsoid similarity. The KLD is traditionally used as a measure of similarity between two gaussian distributions, each described by a positive-definite symmetric covariance matrices, and it is a smooth, always positive, scalar-valued operation that tends to zero when the distributions are identical~\cite{duchi2007derivations}. Furthermore, the KLD is asymmetric~\cite{DKLvisual}. These characteristics make it a good candidate to quantify similarity between ellipsoids. The KLD from $\Omega_1$ to $\Omega_2$ with centers $\vm{q}_1$, $\vm{q}_2$ and shape matrices $\vm{Q}_1$, $\vm{Q}_2$ respectively, and dimensions $n \times n$, has the function notation \KLD{.}{.} and is given by
 \begin{align}
@@ -293,13 +311,13 @@ The array of pairwise KLD operations between elements of $\RA$ and $\RD$ is deno
 
 The \verb|min| operator is not continuous, which makes it unsuitable for optimization problems~\cite{GilpinSTLlse}. The LSE function, denoted by \LSE{.}, poses a smooth under-approximation of the \verb|min| operator as seen in~\cite{LindemannCBFlse}.
 
-Before moving on, a disclaimer is called for. Recalling~\eqref{eq:reach-condition}, the defender can reach all positions the attacker can reach at some moment $i$, if $\ED_i \cap \EA_i \supseteq \EA_i$ and $\ED_i$ is an inner approximation. Since the defender set is defined as a parametope, which is an over-approximation, only the first part of the condition may hold, which does not guarantee interception. However, it is considered that the larger the volume of $\ED_i^3 \cap \EA_i^3$, the more likely the defender is to intercept the attacker. With this approach in mind, the proposed control architecture is presented in the following section.
+Recalling~\eqref{eq:reach-condition}, the defender can reach all positions the attacker can reach at some moment $i$, if $\ED_i \cap \EA_i \supseteq \EA_i$ and $\ED_i$ is an inner approximation. Since the defender set is defined as a parametope, which is an over-approximation, only the first part of the condition may hold, which does not guarantee interception. However, the larger the volume of $\ED_i^3 \cap \EA_i^3$, the more likely the defender is to intercept the attacker.
 
 \subsection{Control Architecture}
-The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$. Before being passed to the solver, this data is transformed as follows.
+The controller receives as input the current defender state $\xD$ and current DRC $\RD$, as well as the current attacker state $\xA$, reachable set parameter matrix $\alphaA$ and reachable set radius $\yA$.
 
-Knowing the attacker model, $\RA^3$ can be pre-computed in full before being passed as parameters to the numerical solver, to ease the computational burden.
-Computing the full $\RD$ trajectory online is impractical however, as the objective function becomes far too complex for the solver to handle, being composed of dozens of thousands of sub-functions. For this reason, an approximated ellipsoid $\ED'$ is defined in the defender's case, given by 
+$\RA^3$ is pre-computed in full from $\xA$, $\alphaA$ and $\yA$ before being passed as a parameter to the numerical solver, to ease the computational burden.
+Computing the full $\RD$ trajectory is impractical, however, as the objective function becomes far too complex for the solver to handle. For this reason, an approximated ellipsoid $\ED'$ is defined in the defender's case, given by 
 \begin{align}
     &\ED' = \{ \xD \in \mathbb{R}^3 : \varepsilon (\pD, \vm{W}) \le 1\},\\
     &\vm{W}= w(\dcmD, \yD),
@@ -313,27 +331,27 @@ where $\pD$ is the positional component of the defender model, $\dcmD$ is the ro
     \end{bmatrix}
     \right) \cdot \dcmD^T.
 \end{equation}
-The intuition here is that $\vm{W}$ is a disk, aligned according to the defender's dynamics, scaled with the most pessimistic radius given by $\yD$. The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$, that is $\RD' = \{\ED_k'\}, \quad k=[0:N]$. The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
+The intuition here is that $\vm{W}$ is a disk, aligned according to the defender's dynamics, scaled with the most pessimistic radius given by $\yD$. The set of all 3-dimensional reduced defender ellipsoids for predicted time-steps is denoted $\RD'$, that is $\RD' = \{\ED_k'\}, \quad k=[0:N]$. %The data flow diagram for the defender controller is shown in Figure~\ref{fig:NMPC_diag}.
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.9\columnwidth]{NMPCdiag}
-    \caption[Diagram of defense controller]{Data flow diagram of defense-centric controller.}
-    \label{fig:NMPC_diag}
-\end{figure}
+%\begin{figure}[htbp]
+%    \centering
+%    \includegraphics[width=0.9\columnwidth]{NMPCdiag}
+%    \caption[Diagram of defense controller]{Data flow diagram of defense-centric controller.}
+%    \label{fig:NMPC_diag}
+%\end{figure}
 
 %[NOTE: THE DRC' IS COMPUTED ONLINE AS A NMPC CONSTRAINT, NOT PRE-COMPUTED!!!]
 
-Next in series, the NMPC receives as inputs the $\RA^3$ defined previously, and in following, the components of the NMPC objective function components are defined and briefly explained, before joining them together.
-Consider the minimum KLD from $\EA_k^3$ to $\ED_k'$, $k=[0:N]$, to be
+The NMPC objective function will receive as input the $\RA^3$ defined previously. It will be defined as a composition of several terms. 
+The minimum KLD terms from $\EA_k^3$ to $\ED_k'$, $k=[0:N]$ are given by
 \begin{equation}
     d_{AD} = \LSE{\bKLD{\RA^3}{\RD'}},
 \end{equation}
-and the symmetric counterpart,
+and its symmetric counterpart is,
 \begin{equation}
-    d_{DA} = \LSE{\bKLD{\RD'}{\RA^3}},
+    d_{DA} = \LSE{\bKLD{\RD'}{\RA^3}}.
 \end{equation}
-and assume that both values correspond to the pair of concurrent ellipsoids $\ED_i'$ and $\EA_i^3$ closest to each other. In the final stage of approach, when there is overlap between $\RD'$ and $\RA^3$, in order for the first part of the reach condition defined in~\eqref{eq:reach-condition} to be satisfied, then the inequality $d_{AD} \le d_{DA}$ must be verified. Thus, the system should evolve such that $d_{AD}$ decreases faster than $d_{DA}$, which is enforced by minimizing $d_{AD}$ and at the same time maximizing $d_{DA}$ in the objective function.
+Assume that both values correspond to the pair of concurrent ellipsoids $\ED_i'$ and $\EA_i^3$ closest to each other. In the final stage of approach, when there is overlap between $\RD'$ and $\RA^3$, in order for the first part of the reach condition defined in~\eqref{eq:reach-condition} to be satisfied, then the inequality $d_{AD} \le d_{DA}$ must be verified. Thus, the system should evolve such that $d_{AD}$ decreases faster than $d_{DA}$, which is enforced by minimizing $d_{AD}$ and at the same time maximizing $d_{DA}$ in the objective function.
 
 The relevant minimum KLD is the one between the pair of concurrent ellipsoids which are nearest. This is enforced by introducing the term $e$ in the objective function, which is the minimum of the set of ellipsoid center error norms, denoted as 
 \begin{equation}
@@ -382,7 +400,7 @@ where $q(.)$ is the attacker dynamics, $\xA$ the attacker state vector, $\alphaA
 The developed systems were validated through simulation, implemented in MATLAB~\cite{MATLAB}, using the Runge-Kutta-4 (RK4)~\cite{RK4} integration method and a time-step length of $0.01s$. The simulated quad-rotor drones have the physical parameters defined in Table~\ref{tab:quadrotor_parameters} and the input bounds defined in Table~\ref{tab:quadrotor_variable_bounds}.
 
 \subsection{Reachable Set Validation}
-A simulation of a quad-rotor model moving from an initial hovering position to another hovering position was run with MATLAB~\cite{MATLAB} to verify the accuracy of the reachable set, outlined in Section~\ref{sec:parametric-reachable-set}, when compared to potential trajectories. Predicted state trajectories are computed from the current moment to the prediction horizon by fixing the drone's torque input $[\uD_2;\uD_3;\uD_4]$ as combinations of the maximum, minimum, and middle values, and the $\uD_1$ input at its minimum or maximum. 
+A simulation of a quad-rotor model moving from an initial hovering position to another hovering position was run with MATLAB to verify the accuracy of the reachable set, outlined in Section~\ref{sec:parametric-reachable-set}, when compared to potential trajectories. Predicted state trajectories are computed from the current moment to the prediction horizon by fixing the drone's torque input $[u_2;u_3;u_4]$ as combinations of the maximum, minimum, and middle values, and the $u_1$ input at its minimum or maximum. 
 
 In both the following figures, the $k_{sim}$ axis indicates the real-time time-steps, and the $k_{pred}$ axis indicates the predicted time-steps. Figure~\ref{fig:reach-set-median-error} shows the median distance between the reachable set surface and the trajectories it contains~\cite{ellipPoint} at the respective time-steps, where positive values indicate the trajectory is contained in the set, and negative values that it's outside. Figure~\ref{fig:reach-set-volume-error} shows the volume difference between the reachable set and the convex hull formed by the trajectories.
 
@@ -400,7 +418,7 @@ In both the following figures, the $k_{sim}$ axis indicates the real-time time-s
 
 \subsection{Two Drone Scenario}
 
-A reach-avoid scenario is simulated with MATLAB~\cite{MATLAB}, in which the attacker drone moves toward the critical area, set at the origin, and has a polynomial trajectory planner in series with a Mellinger controller~\cite{Mellinger} as the control architecture. Furthermore, the attacker's trajectory is made unpredictable by repeatedly shifting the target waypoint by random amounts. The defender drone is initially hovering above the critical area.
+A reach-avoid scenario is simulated with MATLAB, in which the attacker drone moves toward the critical area, set at the origin, and has a polynomial trajectory planner in series with a Mellinger controller~\cite{Mellinger} as the control architecture. Furthermore, the attacker's trajectory is made unpredictable by repeatedly shifting the target waypoint by random amounts. The defender drone is initially hovering above the critical area.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}

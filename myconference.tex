@@ -1,5 +1,6 @@
-\documentclass[10pt,conference]{IEEEtran}
+\documentclass[letterpaper,10pt,conference]{ieeeconf}
 \IEEEoverridecommandlockouts
+\overrideIEEEmargins                                      % Needed to meet printer requirements.
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 %\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -82,7 +83,7 @@
 
 \newcommand{\so}[1]{[#1]_{\times}} % Skew Asymmetric matrix
 
-\title{Autonomous UAV Control in Adversary Scenarios: An Application of Reachability Analysis via Controlled Dynamical Embeddings\\
+\title{Autonomous UAV Control in Adversary Scenarios: An Application of Reachability Analysis via Controlled Dynamical Embeddings
 %{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured in Xplore and
 %should not be used}
 }
@@ -144,9 +145,9 @@ simulated environment in MATLAB.
 %The effectiveness of the proposed controller in several reach-avoid scenarios is demonstrated by computer simulations which show that the defender can reliably block the attacker's feasible trajectories to its target. Additionally, the notion of a "safeguarded area" is introduced, which measures the overlap between the defender and attacker reachable sets.\\
 \end{abstract}
 
-\begin{IEEEkeywords}
-quad-rotor, UAV, reach-avoid, control, autonomous, adversarial, NMPC, reachability, embeddings, defense
-\end{IEEEkeywords}
+%\begin{IEEEkeywords}
+%quad-rotor, UAV, reach-avoid, control, autonomous, adversarial, NMPC, reachability, embeddings, defense
+%\end{IEEEkeywords}
 
 \section{Introduction}
 Reach-Avoid (RA) games are a class of differential games between two adversary agents, wherein an attacker agent aims to reach a target, while the defender agent aims to intercept the attacker before it reaches its goal.
@@ -164,7 +165,7 @@ Since the conception of differential games~\cite{isaacs1999differential_seminal}
 %
 For instance, solving the Hamilton-Jacobi-Isaacs (HJI) system of differential equations is one method to solve RA games that guarantees optimal control, at the cost of being prohibitively computationally expensive for systems of higher dimensions~\cite{zhou2016cooperative,Bui2025ReachAvoidDG,hayoun2017guaranteeing}.
 %
-Alternatively, Constraint Barrier Function (CBF) based strategies condition the input as to ensure the system stays within a set of values which ensure interception under certain conditions~\cite{Bui2025ReachAvoidDG,chen2025cooperative,AliMPCCBF,davydov2021pursuer}, but the CBF cannot provide an optimal trajectory, only instantaneous inputs, and it struggles to handle non-linear systems.
+Alternatively, Control Barrier Function (CBF) based strategies condition the input as to ensure the system stays within a set of values which ensure interception under certain conditions~\cite{Bui2025ReachAvoidDG,chen2025cooperative,AliMPCCBF,davydov2021pursuer}, but the CBF cannot provide an optimal trajectory, only instantaneous inputs, and it struggles to handle non-linear systems.
 
 Overall, the Non-linear Model Predictive Controller (NMPC) is well-suited for our RA problem since it can deal with non-linear dynamics directly and offers great flexibility in choice of objectives and constraints, by calculating the state trajectory that minimizes an objective function over a finite time horizon~\cite{DoraN,}.
 
@@ -301,7 +302,7 @@ and the same applies for $\EA^3$. Computing the intersection of ellipsoids invar
 
 In lieu of ellipsoid intersection, the KLD is used to quantify ellipsoid similarity. The KLD is traditionally used as a measure of similarity between two gaussian distributions, each described by a positive-definite symmetric covariance matrices, and it is a smooth, always positive, scalar-valued operation that tends to zero when the distributions are identical~\cite{duchi2007derivations}. Furthermore, the KLD is asymmetric~\cite{DKLvisual}. These characteristics make it a good candidate to quantify similarity between ellipsoids. The KLD from $\Omega_1$ to $\Omega_2$ with centers $\vm{q}_1$, $\vm{q}_2$ and shape matrices $\vm{Q}_1$, $\vm{Q}_2$ respectively, and dimensions $n \times n$, has the function notation \KLD{.}{.} and is given by
 \begin{align}
-    \KLD{\Omega_1}{\Omega_2} = &\frac{1}{2} ( \mathtt{tr}(\vm{Q}_2^{-1} \vm{Q}_2) + (\vm{q}_2-\vm{q}_1)^T \vm{Q}_2^{-1} (\vm{q}_2-\vm{q}_1) \nonumber\\
+    \KLD{\Omega_1}{\Omega_2} = &\frac{1}{2} ( \mathtt{tr}(\vm{Q}_2^{-1} \vm{Q}_1) + (\vm{q}_2-\vm{q}_1)^T \vm{Q}_2^{-1} (\vm{q}_2-\vm{q}_1) \nonumber\\
     &- n + \ln \left( \frac{\det \vm{Q}_2}{\det \vm{Q}_1} \right) ).
 \end{align}
 The array of pairwise KLD operations between elements of $\RA$ and $\RD$ is denoted by $\bKLD{\RA}{\RD}$ such that
